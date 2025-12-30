@@ -1,0 +1,3 @@
+# 指定数据存储目录
+storage:
+  storage_path: "./qdrant_storage" # 这里可以是你的自定义路径

@@ -1,0 +1,69 @@
+# langgraph-chatbot-pure/pyproject.toml
+[project]
+name = "langgraph-chatbot"
+version = "1.0.0"
+description = "基于LangGraph + Qdrant + MCP的智能对话机器人"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # ========== 核心AI与框架 ==========
+    "openai>=1.12.0",           # OpenAI API客户端
+    "langgraph>=0.0.30",        # 流程编排核心
+    "langchain>=0.1.0",         # LangChain核心
+    "langchain-openai>=0.0.5",  # LangChain的OpenAI集成
+    "langchain-community>=0.0.10", # LangChain社区组件
+
+    # ========== 向量数据库与检索 ==========
+    "qdrant-client>=1.7.0",     # Qdrant向量数据库客户端
+    "sentence-transformers>=3.0.0", # 本地嵌入模型 (含cross-encoder)
+
+    # ========== MCP与工具调用 ==========
+    "mcp>=1.0.0",               # MCP协议官方客户端 (关键!)
+    "httpx>=0.25.0",            # 异步HTTP客户端 (用于MCP通信)
+
+    # ========== Web服务与API ==========
+    "fastapi>=0.104.0",         # API框架
+    "uvicorn[standard]>=0.24.0", # ASGI服务器
+    "python-multipart>=0.0.6",  # 文件上传支持
+
+    # ========== 数据处理与工具 ==========
+    "pydantic>=2.5.0",          # 数据验证与设置管理
+    "python-dotenv>=1.0.0",     # 环境变量管理
+    "numpy>=1.24.0",            # 数值计算
+    "pandas>=2.0.0",            # 数据分析 (可选，但常用)
+
+    # ========== 文档处理 ==========
+    "pypdf>=3.17.0",            # PDF解析
+    "python-docx>=1.1.0",       # Word文档解析
+    "chardet>=5.2.0",           # 字符编码检测
+]
+
+[project.optional-dependencies]
+# ========== 开发与测试依赖 ==========
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.11.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
+    "ipython>=8.18.0",          # 交互式调试
+    "jupyter>=1.0.0",           # Notebook支持
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+select = [
+    "E", "F", "W",  # 基本错误、格式、警告
+    "I",            # import排序
+    "UP",           # pyupgrade - 现代化Python代码
+]
+ignore = ["E501"]  # 忽略行长度限制（由black处理）
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
