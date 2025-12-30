@@ -6,8 +6,8 @@ from typing import List, Dict, Any, Optional
 
 from src.agents.chatbot_agent import ChatbotAgent
 from src.core.vector_store import vector_store
-from src.core.loader import DocumentLoader
-from src.core.splitter import DocumentSplitter
+from utils.loader import DocumentLoader
+from utils.splitter import DocumentSplitter
 from src.utils.logger import logger
 
 # 创建FastAPI应用

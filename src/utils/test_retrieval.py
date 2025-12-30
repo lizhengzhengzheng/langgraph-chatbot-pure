@@ -28,4 +28,4 @@ print(f"检索到 {len(results)} 个结果:")
 for i, r in enumerate(results):
     print(f"\n{i+1}. 工具名: {r.payload.get('metadata', {}).get('name', 'N/A')}")
     print(f"   相似度分数: {r.score:.4f}")
-    print(f"   工具描述: {r.payload.get('text', 'N/A')[:100]}...")
+    print(f"   工具描述: {r.payload.get('text', 'N/A')}")

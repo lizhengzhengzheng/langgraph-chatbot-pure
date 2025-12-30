@@ -11,8 +11,8 @@ import argparse
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from src.core.loader import DocumentLoader
-from src.core.splitter import DocumentSplitter
+from utils.loader import DocumentLoader
+from utils.splitter import DocumentSplitter
 from src.core.vector_store import vector_store
 from src.utils.logger import logger
 

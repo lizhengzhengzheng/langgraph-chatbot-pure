@@ -37,5 +37,9 @@ Thumbs.db
 
 # Project Specific
 qdrant/qdrant_storage/
+qdrant/documents/
 *.log
 .env
+/qdrant/storage/
+/langgraph_flowchart.png
+/qdrant/qdrant.exe
