@@ -1,11 +1,13 @@
-# src/graph/mcp_nodes.py
+# file: src/graph/mcp_nodes.py
 from typing import Dict, Any
+
+from src.core.context import RequestContextAware
+from src.core.mcp_client import mcp_client
 from src.graph.state import AgentState
 from src.utils.logger import logger
-from src.core.mcp_client import mcp_client
 
 
-class MCPRoutingNode:
+class MCPRoutingNode(RequestContextAware):
     """MCP智能路由节点"""
 
     async def __call__(self, state: AgentState) -> Dict[str, Any]:
@@ -50,7 +52,7 @@ class MCPRoutingNode:
             }
 
 
-class MCPExecutionNode:
+class MCPExecutionNode(RequestContextAware):
     """MCP工具执行后处理节点"""
 
     async def __call__(self, state: AgentState) -> Dict[str, Any]:
@@ -66,3 +68,12 @@ class MCPExecutionNode:
             "tool_context": tool_context,
             "current_step": "mcp_execution"
         }
+
+
+def create_mcp_nodes(context_manager=None):
+    """创建MCP节点实例"""
+    return {
+        "mcp_routing": MCPRoutingNode(context_manager=context_manager),
+        "mcp_execution": MCPExecutionNode(context_manager=context_manager)
+    }
+

@@ -4,6 +4,8 @@ from sentence_transformers import SentenceTransformer
 
 from src.config.settings import settings
 from src.utils.logger import logger
+
+
 # 文本块 → 向量（数字列表）
 # 语义理解器。将任何文本（用户问题、你的文档）转换为蕴含语义的数字向量（嵌入），这是实现语义搜索的数学基础。
 class LocalEmbeddings:
@@ -29,8 +31,8 @@ class LocalEmbeddings:
         if not self.model:
             self._load_model()
 
-        embeddings = self.model.encode(texts, show_progress_bar=False)
-        return embeddings.tolist()
+        embedding_list = self.model.encode(texts, show_progress_bar=False)
+        return embedding_list.tolist()
 
     def embed_query(self, text: str) -> List[float]:
         """为查询生成嵌入"""
