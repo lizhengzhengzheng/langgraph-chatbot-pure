@@ -1,10 +1,14 @@
 import uuid
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
+
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
+
 from src.config.settings import settings
 from src.core.embeddings import embeddings
 from src.utils.logger import logger
+
+
 # 向量 + 原文块 → 存入数据库的记录
 # 负责连接、操作本地的Qdrant向量数据库，实现知识的存储（add_documents）和基于语义的检索（search）。
 # 将向量和原文作为一个整体，高效地存储到专用数据库（Qdrant）中，并提供检索接口。

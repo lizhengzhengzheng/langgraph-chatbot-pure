@@ -7,6 +7,7 @@ import httpx
 from sentence_transformers import SentenceTransformer
 
 from src.config.settings import settings
+from src.core.llm_client import llm_client
 from src.core.vector_store import vector_store
 from src.utils.logger import logger
 
@@ -106,8 +107,6 @@ class MCPToolClient:
         relevant_tools = await self.retrieve_relevant_tools(user_query, top_k=3)
         if not relevant_tools:
             return {"error": "未找到相关工具", "response": "我暂时无法处理这个请求"}
-
-        from src.core.llm_client import llm_client
 
         tools_description = "\n".join([
             f"- {tool['name']}: {tool['description']} "

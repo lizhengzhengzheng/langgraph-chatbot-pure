@@ -39,7 +39,8 @@ class SessionManager:
     def _get_session_key(self, session_id: str) -> str:
         return f"{self.SESSION_PREFIX}{session_id}"
 
-    def generate_session_id(self) -> str:
+    @staticmethod
+    def generate_session_id() -> str:
         return str(uuid.uuid4())
 
     def create_session(self, user_id: str = "") -> SessionContext:
@@ -119,7 +120,8 @@ class SessionManager:
         )
         return True
 
-    def clean_expired_sessions(self):
+    @staticmethod
+    def clean_expired_sessions():
         # Redis自动过期，无需手动清理，此方法保留兼容
         return 0
 

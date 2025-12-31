@@ -3,14 +3,14 @@ from typing import List, Dict, Any
 
 from sentence_transformers import CrossEncoder
 
-from core.session import session_manager
+from config.settings import settings
 from src.core.llm_client import llm_client
 from src.core.vector_store import vector_store
 
 
 # 高级检索引擎 (集成查询重写、混合搜索、重排)
 class QueryRewriter:
-    def rewrite(self, original_query: str, chat_history: list = None) -> str:
+    def rewrite(self, original_query: str) -> str:
         prompt = f"""
         你是一个查询优化助手。请将用户的原始问题，优化成一个更适合用于知识库语义检索的查询语句。
         要求：保持原意，消除歧义，可以适当补充相关的同义词或上位词，使其更完整、更正式。
@@ -34,13 +34,7 @@ class HybridRetriever:
     def __init__(self):
         self.rewriter = QueryRewriter()
 
-    def retrieve(self, query: str, session_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
-        # 1. 获取会话上下文（自动创建不存在的会话）
-        session_context = session_manager.get_session(session_id, auto_create=True)
-        # 2. 优先从会话缓存获取（可选，提升性能）
-        cache_key = f"retrieve_{hash(query)}_{top_k}"
-        if cache_key in session_context.retriever_cache:
-            return session_context.retriever_cache[cache_key]
+    def retrieve(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
         # 1. 查询重写
         rewritten_query = self.rewriter.rewrite(query)
 
@@ -70,16 +64,13 @@ class HybridRetriever:
 
         final_results = unique_results[:top_k * 2]
 
-        # 4. 缓存到当前会话（避免重复检索）
-        session_context.retriever_cache[cache_key] = final_results
-
         return final_results
 
 
 class Reranker:
-    def __init__(self, model_name: str = 'cross-encoder/ms-marco-MiniLM-L-6-v2'):
-        # 这个模型专门用于 (query, passage) 相关性评分
-        self.model = CrossEncoder(model_name, max_length=512)
+    def __init__(self):
+        # 模型应专门用于 (query, passage) 相关性评分
+        self.model = CrossEncoder(settings.embedding_model)
 
     def rerank(self, query: str, candidates: List[Dict[str, Any]], top_k: int = 5) -> List[Dict[str, Any]]:
         if not candidates:

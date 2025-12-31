@@ -1,9 +1,8 @@
-from typing import List, Dict, Any, TypedDict
+# file: src/graph/state.py
+from typing import List, Dict, Any, TypedDict, Optional
 
-# 定义统一数据格式。用 TypedDict 明确规定在整个流程中传递的“数据包裹”（AgentState）里必须有哪些字段（如user_input, context等）。
 class AgentState(TypedDict):
-    """智能体状态"""
-
+    """智能体状态（纯业务状态）"""
     # 输入
     user_input: str
     chat_history: List[Dict[str, str]]
@@ -21,3 +20,10 @@ class AgentState(TypedDict):
     should_retrieve: bool
     should_end: bool
     current_step: str
+
+    # MCP相关
+    should_use_tool: bool
+    tool_name: Optional[str]
+    tool_result: Optional[Dict[str, Any]]
+    tool_context: Optional[str]
+    tool_error: Optional[str]

@@ -48,6 +48,8 @@ class ChatResponse(BaseModel):
     response: str = Field(..., description="助手回复")
     sources: List[Dict[str, Any]] = Field(default=[], description="参考来源")
     conversation_id: Optional[str] = Field(None, description="会话ID")
+    request_id: Optional[str] = Field(None, description="请求ID")
+    tool_used: Optional[str] = Field(None, description="命中的工具")
 
 
 class DocumentUploadRequest(BaseModel):
@@ -86,23 +88,28 @@ async def root():
 
 
 @session_router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, session_id: str = Depends(verify_session)):
+async def chat(
+        request: ChatRequest,
+        session_id: str = Depends(verify_session)
+):
     """聊天接口"""
     try:
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="消息不能为空")
 
-        # 处理聊天请求
+        # 处理聊天请求（自动管理请求上下文）
         result = await chatbot_agent.chat(request.message, session_id)
 
         return ChatResponse(
             response=result["response"],
             sources=result.get("sources", []),
-            conversation_id=session_id  # 可以扩展会话管理
+            conversation_id=session_id,
+            request_id=result.get("request_id"),
+            tool_used=result.get("tool_used")
         )
 
     except Exception as e:
-        logger.error(f"聊天处理失败: {str(e)}")
+        logger.error(f"[{session_id[:8]}] 聊天处理失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"处理失败: {str(e)}")
 
 
@@ -214,8 +221,8 @@ if __name__ == "__main__":
     try:
         vector_store.create_collection()
         logger.info("向量库集合已初始化")
-    except Exception as e:
-        logger.warning(f"初始化向量库集合失败: {str(e)}")
+    except Exception as exception:
+        logger.warning(f"初始化向量库集合失败: {str(exception)}")
 
     uvicorn.run(
         app,

@@ -2,23 +2,26 @@
 import sys
 from pathlib import Path
 
+from core.context import request_context_manager
+
 # 添加项目路径，确保能导入模块
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
 # 导入你的图实例
-from src.graph import chatbot_graph
+from src.graph import ChatbotGraph
 
+graph_instance = ChatbotGraph(context_manager=request_context_manager)
 # 1. 生成Mermaid格式的文本定义（可嵌入文档）
 print("=== Mermaid 文本定义 ===")
-mermaid_text = chatbot_graph.compiled_graph.get_graph().draw_mermaid()
+mermaid_text = graph_instance.compiled_graph.get_graph().draw_mermaid()
 print(mermaid_text)
 print("\n复制上述文本到 https://mermaid.live 查看流程图")
 # 2. 尝试生成并保存为图片文件
 print("\n=== 尝试生成图片 ===")
 try:
     # 生成PNG图片数据
-    image_data = chatbot_graph.compiled_graph.get_graph().draw_mermaid_png()
+    image_data = graph_instance.compiled_graph.get_graph().draw_mermaid_png()
     # 保存到文件
     output_path = project_root / "langgraph_flowchart.png"
     with open(output_path, "wb") as f:
@@ -30,5 +33,4 @@ except Exception as e:
 
 # 3. 打印文本结构
 print("\n=== 图结构概览 ===")
-print(f"图包含的节点: {list(chatbot_graph.compiled_graph.nodes.keys())}")
-print(f"图包含的边: {chatbot_graph.compiled_graph.edges}")
+print(f"图包含的节点: {list(graph_instance.compiled_graph.nodes.keys())}")

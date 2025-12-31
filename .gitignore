@@ -43,3 +43,4 @@ qdrant/documents/
 /qdrant/storage/
 /langgraph_flowchart.png
 /qdrant/qdrant.exe
+/src/utils/langgraph_flowchart.png
