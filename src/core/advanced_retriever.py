@@ -1,4 +1,5 @@
 # src/core/advanced_retriever.py
+from core.session import session_manager
 from src.core.llm_client import llm_client
 
 # 高级检索引擎 (集成查询重写、混合搜索、重排)
@@ -32,7 +33,13 @@ class HybridRetriever:
     def __init__(self):
         self.rewriter = QueryRewriter()
 
-    def retrieve(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    def retrieve(self, query: str, session_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
+        # 1. 获取会话上下文（自动创建不存在的会话）
+        session_context = session_manager.get_session(session_id, auto_create=True)
+        # 2. 优先从会话缓存获取（可选，提升性能）
+        cache_key = f"retrieve_{hash(query)}_{top_k}"
+        if cache_key in session_context.retriever_cache:
+            return session_context.retriever_cache[cache_key]
         # 1. 查询重写
         rewritten_query = self.rewriter.rewrite(query)
 
@@ -60,8 +67,12 @@ class HybridRetriever:
                 seen_ids.add(r['id'])
                 unique_results.append(r)
 
-        # 4. 返回未重排的混合结果 (下一步进行重排)
-        return unique_results[:top_k * 2]  # 返回比最终需求更多的候选
+        final_results = unique_results[:top_k * 2]
+
+        # 4. 缓存到当前会话（避免重复检索）
+        session_context.retriever_cache[cache_key] = final_results
+
+        return final_results
 
 # 安装 sentence-transformers 的交叉编码器
 # pip install sentence-transformers[cross-encoder]

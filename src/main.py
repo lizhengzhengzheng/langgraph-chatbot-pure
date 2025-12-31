@@ -1,15 +1,23 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
+import uvicorn
+from fastapi import FastAPI, HTTPException, Query, APIRouter, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from core.session import session_manager, verify_session
 from src.agents.chatbot_agent import ChatbotAgent
 from src.core.vector_store import vector_store
+from src.utils.logger import logger
 from utils.loader import DocumentLoader
 from utils.splitter import DocumentSplitter
-from src.utils.logger import logger
 
+# 创建一个会话相关的路由器
+session_router = APIRouter(
+    prefix="/session",
+    tags=["会话相关"],
+    dependencies=[Depends(verify_session)]
+)
 # 创建FastAPI应用
 app = FastAPI(
     title="智能对话机器人API",
@@ -60,7 +68,6 @@ class CollectionInfoResponse(BaseModel):
     vectors_count: int = Field(..., description="向量数量")
     status: str = Field(..., description="状态")
 
-
 # API路由
 @app.get("/")
 async def root():
@@ -78,20 +85,20 @@ async def root():
     }
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@session_router.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest, session_id: str = Depends(verify_session)):
     """聊天接口"""
     try:
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="消息不能为空")
 
         # 处理聊天请求
-        result = await chatbot_agent.chat(request.message)
+        result = await chatbot_agent.chat(request.message, session_id)
 
         return ChatResponse(
             response=result["response"],
             sources=result.get("sources", []),
-            conversation_id=None  # 可以扩展会话管理
+            conversation_id=session_id  # 可以扩展会话管理
         )
 
     except Exception as e:
@@ -156,16 +163,36 @@ async def get_collection_info():
         raise HTTPException(status_code=500, detail=f"获取失败: {str(e)}")
 
 
-@app.post("/clear-history")
-async def clear_history():
-    """清空聊天历史"""
+@session_router.post("/clear-history")
+async def clear_history(session_id: str = Query(..., description="会话唯一标识")):
+    """清空指定会话的聊天历史（会话隔离版）"""
     try:
-        chatbot_agent.clear_history()
-        return {"success": True, "message": "聊天历史已清空"}
+        # 按Session ID清空，而非全局清空
+        session_manager.clear_session_history(session_id)
+        return {"success": True, "message": f"会话 {session_id} 历史已清空"}
 
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"清空历史失败: {str(e)}")
+        logger.error(f"清空会话 {session_id} 历史失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"清空失败: {str(e)}")
+
+# 新增：创建会话接口（前端初始化会话时调用）
+@app.post("/create-session")
+async def create_session(
+    user_id: str = Query("", description="用户ID（可选）")
+):
+    """创建新会话（返回Session ID）"""
+    try:
+        context = session_manager.create_session(user_id=user_id)
+        return {
+            "success": True,
+            "session_id": context.session_id,
+            "create_time": context.create_time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+    except Exception as e:
+        logger.error(f"创建会话失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}")
 
 
 @app.get("/health")
@@ -176,7 +203,8 @@ async def health_check():
         "service": "ai-chatbot",
         "timestamp": "2024-01-01T00:00:00Z"
     }
-
+# 挂载路由
+app.include_router(session_router)
 
 if __name__ == "__main__":
     # 启动服务

@@ -1,7 +1,8 @@
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
@@ -28,5 +29,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # redis配置
+    redis_host: str = os.getenv("REDIS_HOST", "")
+    redis_port: str = os.getenv("REDIS_PORT", "")
+    redis_password: str = os.getenv("REDIS_PASSWORD", "")
 
 settings = Settings()
