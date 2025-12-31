@@ -1,9 +1,34 @@
 from typing import Dict, Any
-from src.graph.state import AgentState
-from src.core.vector_store import vector_store
+
+from src.core.advanced_retriever import HybridRetriever, Reranker
 from src.core.llm_client import llm_client
+from src.core.vector_store import vector_store
+from src.graph.state import AgentState
 from src.utils.logger import logger
 
+
+def route_query(state: AgentState) -> Dict[str, Any]:
+    """路由查询节点 - 决定是否需要检索文档"""
+    logger.info("路由查询")
+
+    user_input = state["user_input"]
+
+    # 判断是否需要检索文档
+    # 这里可以根据查询内容来决定是否需要检索
+    # 例如：如果是一般性对话，可能不需要检索；如果是具体问题，需要检索
+
+    # 简单的关键词判断
+    retrieval_keywords = ["什么", "如何", "为什么", "怎样", "解释", "介绍", "说明"]
+    should_retrieve = any(keyword in user_input for keyword in retrieval_keywords)
+
+    # 如果没有明确关键词，但也可能是问题
+    if not should_retrieve and len(user_input) > 10 and "?" in user_input:
+        should_retrieve = True
+
+    return {
+        "should_retrieve": should_retrieve,
+        "current_step": "route_query"
+    }
 
 def retrieve_documents(state: AgentState) -> Dict[str, Any]:
     """检索相关文档节点"""
@@ -91,30 +116,6 @@ def generate_response(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def route_query(state: AgentState) -> Dict[str, Any]:
-    """路由查询节点 - 决定是否需要检索文档"""
-    logger.info("路由查询")
-
-    user_input = state["user_input"]
-
-    # 判断是否需要检索文档
-    # 这里可以根据查询内容来决定是否需要检索
-    # 例如：如果是一般性对话，可能不需要检索；如果是具体问题，需要检索
-
-    # 简单的关键词判断
-    retrieval_keywords = ["什么", "如何", "为什么", "怎样", "解释", "介绍", "说明"]
-    should_retrieve = any(keyword in user_input for keyword in retrieval_keywords)
-
-    # 如果没有明确关键词，但也可能是问题
-    if not should_retrieve and len(user_input) > 10 and "?" in user_input:
-        should_retrieve = True
-
-    return {
-        "should_retrieve": should_retrieve,
-        "current_step": "route_query"
-    }
-
-
 def direct_response(state: AgentState) -> Dict[str, Any]:
     """直接响应节点 - 当不需要检索时直接回答"""
     logger.info("直接响应")
@@ -152,10 +153,6 @@ def direct_response(state: AgentState) -> Dict[str, Any]:
         "should_end": True,
         "sources": []  # 直接响应没有来源
     }
-
-
-from src.core.advanced_retriever import HybridRetriever, Reranker
-
 
 class AdvancedRetrievalNode:
     def __init__(self):

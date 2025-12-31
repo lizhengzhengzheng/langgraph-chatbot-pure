@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from core.session import session_manager, redis_client
 from src.graph import chatbot_graph
@@ -50,12 +50,3 @@ class ChatbotAgent:
             "sources": result.get("sources", []),
             "conversation_id": session_id
         }
-
-    def clear_history(self):
-        """清空聊天历史"""
-        self.chat_history = []
-        logger.info("聊天历史已清空")
-
-    def get_history(self) -> List[Dict[str, str]]:
-        """获取聊天历史"""
-        return self.chat_history

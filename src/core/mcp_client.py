@@ -1,12 +1,14 @@
 # src/core/mcp_client.py
-import httpx
-import json
 import asyncio
-from typing import List, Dict, Any, Optional, Union
+import json
+from typing import List, Dict, Any, Optional
+
+import httpx
 from sentence_transformers import SentenceTransformer
+
 from src.config.settings import settings
-from src.utils.logger import logger
 from src.core.vector_store import vector_store
+from src.utils.logger import logger
 
 
 class MCPToolClient:

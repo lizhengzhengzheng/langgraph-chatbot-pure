@@ -1,6 +1,12 @@
 # src/core/advanced_retriever.py
+from typing import List, Dict, Any
+
+from sentence_transformers import CrossEncoder
+
 from core.session import session_manager
 from src.core.llm_client import llm_client
+from src.core.vector_store import vector_store
+
 
 # 高级检索引擎 (集成查询重写、混合搜索、重排)
 class QueryRewriter:
@@ -22,11 +28,6 @@ class QueryRewriter:
             return response["content"].strip()
         except:
             return original_query  # 失败时回退到原查询
-
-
-# 在同一个文件中继续
-from src.core.vector_store import vector_store
-from typing import List, Dict, Any
 
 
 class HybridRetriever:
@@ -73,11 +74,6 @@ class HybridRetriever:
         session_context.retriever_cache[cache_key] = final_results
 
         return final_results
-
-# 安装 sentence-transformers 的交叉编码器
-# pip install sentence-transformers[cross-encoder]
-
-from sentence_transformers import CrossEncoder
 
 
 class Reranker:

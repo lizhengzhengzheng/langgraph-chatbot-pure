@@ -13,7 +13,7 @@ from src.graph import chatbot_graph
 print("=== Mermaid 文本定义 ===")
 mermaid_text = chatbot_graph.compiled_graph.get_graph().draw_mermaid()
 print(mermaid_text)
-
+print("\n复制上述文本到 https://mermaid.live 查看流程图")
 # 2. 尝试生成并保存为图片文件
 print("\n=== 尝试生成图片 ===")
 try:

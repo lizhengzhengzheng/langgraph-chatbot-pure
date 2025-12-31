@@ -1,15 +1,15 @@
 # src/graph/__init__.py
 from langgraph.graph import StateGraph, END
-from src.graph.state import AgentState
+
+# 导入MCP节点
+from src.graph.mcp_nodes import MCPRoutingNode, MCPExecutionNode
 from src.graph.nodes import (
     route_query,
     retrieve_documents,
     generate_response,
     direct_response
 )
-# 导入MCP节点
-from src.graph.mcp_nodes import MCPRoutingNode, MCPExecutionNode
-from src.graph.edges import should_retrieve, after_retrieve
+from src.graph.state import AgentState
 from src.utils.logger import logger
 
 
@@ -71,8 +71,6 @@ class ChatbotGraph:
 
         # MCP执行后生成回答
         workflow.add_edge("mcp_execution", "generate_response")
-
-        # 原有边保持不变
         workflow.add_edge("retrieve_documents", "generate_response")
         workflow.add_edge("generate_response", END)
         workflow.add_edge("direct_response", END)
@@ -177,26 +175,6 @@ class ChatbotGraph:
                 "current_step": "error",
                 "error": str(e)
             }
-
-    def visualize(self):
-        """可视化图结构"""
-        try:
-            # 生成Mermaid格式文本
-            mermaid_text = self.compiled_graph.get_graph().draw_mermaid()
-            print("=== Mermaid 图定义 ===")
-            print(mermaid_text)
-            print("\n复制上述文本到 https://mermaid.live 查看流程图")
-
-            # 打印节点信息
-            print(f"\n=== 图节点 ===")
-            for node_name in self.compiled_graph.nodes:
-                print(f"  - {node_name}")
-
-        except Exception as e:
-            logger.warning(f"无法可视化图: {str(e)}")
-            # 打印简单的文本表示
-            print(f"图节点: {list(self.compiled_graph.nodes.keys())}")
-
 
 # 创建全局实例
 chatbot_graph = ChatbotGraph()
