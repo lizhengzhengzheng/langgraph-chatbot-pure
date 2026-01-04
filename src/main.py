@@ -210,6 +210,71 @@ async def health_check():
         "service": "ai-chatbot",
         "timestamp": "2024-01-01T00:00:00Z"
     }
+
+# 新增数据模型
+class SessionInfoRequest(BaseModel):
+    session_id: str = Field(..., description="会话ID")
+
+
+class UpdatePreferencesRequest(BaseModel):
+    session_id: str = Field(..., description="会话ID")
+    response_style: Optional[str] = Field(None, description="响应风格: concise/detailed/balanced")
+    technical_level: Optional[str] = Field(None, description="技术程度: beginner/intermediate/advanced")
+    preferred_language: Optional[str] = Field(None, description="偏好语言")
+    interests: Optional[List[str]] = Field(None, description="兴趣列表")
+
+
+# 新增API端点
+@app.post("/get-session-info")
+async def get_session_info(request: SessionInfoRequest):
+    """获取会话详细信息"""
+    try:
+        result = await chatbot_agent.get_session_info(request.session_id)
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=404, detail=result["error"])
+    except Exception as e:
+        logger.error(f"获取会话信息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取失败: {str(e)}")
+
+
+@app.post("/update-preferences")
+async def update_preferences(request: UpdatePreferencesRequest):
+    """更新用户偏好"""
+    try:
+        preferences = {
+            k: v for k, v in request.dict().items()
+            if k != "session_id" and v is not None
+        }
+        result = await chatbot_agent.update_user_preferences(
+            request.session_id, preferences
+        )
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result["error"])
+    except Exception as e:
+        logger.error(f"更新偏好失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新失败: {str(e)}")
+
+
+@app.get("/session/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """获取会话摘要"""
+    try:
+        summary = session_manager.get_session_summary(session_id)
+        return {
+            "success": True,
+            "session_id": session_id,
+            "summary": summary
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取会话摘要失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取失败: {str(e)}")
+
 # 挂载路由
 app.include_router(session_router)
 
