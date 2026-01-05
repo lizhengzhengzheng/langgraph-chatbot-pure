@@ -5,8 +5,11 @@ import uuid
 from collections import Counter
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
-from typing import List, Dict, Any
+from functools import lru_cache
+from typing import List, Dict, Any, Set
 
+import jieba
+import jieba.analyse
 import redis
 from fastapi import Request, HTTPException
 
@@ -103,21 +106,115 @@ class SessionContext:
 # 会话分析器
 class SessionAnalyzer:
     """分析会话内容和提取特征"""
+    # 类级别的停用词集合，避免重复加载
+    _stopwords: Set[str] = None
 
     @staticmethod
-    def extract_keywords(text: str, top_k: int = 10) -> List[str]:
-        """提取文本关键词（中文友好）"""
-        # 简单的中文分词（实际项目应使用jieba等库）
-        words = re.findall(r'[\u4e00-\u9fff]+|[a-zA-Z]+', text.lower())
+    def _load_stopwords() -> Set[str]:
+        """加载停用词表（生产环境应从文件或配置加载）"""
+        base_stopwords = {
+            "的", "了", "和", "是", "在", "我", "有", "就", "不", "人", "都", "一", "一个",
+            "上", "也", "很", "到", "说", "要", "去", "你", "会", "着", "没有", "看", "好",
+            "自己", "这", "那", "中", "与", "为", "或", "等", "对", "但", "而", "并", "且"
+        }
 
-        # 过滤停用词
-        stopwords = {"的", "了", "和", "是", "在", "我", "有", "就", "不", "人", "都", "一", "一个", "上", "也", "很",
-                     "到", "说", "要", "去", "你", "会", "着", "没有", "看", "好", "自己", "这"}
-        words = [w for w in words if w not in stopwords and len(w) > 1]
+        # 生产环境可以从文件加载
+        # try:
+        #     with open('stopwords.txt', 'r', encoding='utf-8') as f:
+        #         file_stopwords = set(line.strip() for line in f)
+        #     return base_stopwords.union(file_stopwords)
+        # except FileNotFoundError:
+        #     return base_stopwords
 
-        # 统计词频
-        word_counts = Counter(words)
-        return [word for word, _ in word_counts.most_common(top_k)]
+        return base_stopwords
+
+    @classmethod
+    def get_stopwords(cls) -> Set[str]:
+        """获取停用词集合（单例模式）"""
+        if cls._stopwords is None:
+            cls._stopwords = cls._load_stopwords()
+        return cls._stopwords
+
+    @staticmethod
+    @lru_cache(maxsize=1000)  # 缓存最近1000个文本的分词结果
+    def extract_keywords(text: str,
+                         top_k: int = 10,
+                         use_tfidf: bool = True,
+                         min_word_length: int = 2,
+                         allow_pos: tuple = ('n', 'v', 'a', 'eng')) -> List[str]:
+        """
+        提取文本关键词（生产环境优化版）
+
+        Args:
+            text: 输入文本
+            top_k: 返回关键词数量
+            use_tfidf: 是否使用TF-IDF算法（更准确但更慢）
+            min_word_length: 最小词长
+            allow_pos: 允许的词性（名词、动词、形容词、英文）
+
+        Returns:
+            关键词列表，按重要性排序
+        """
+        if not text or not text.strip():
+            return []
+
+        # 预处理：去除多余空白和特殊字符
+        cleaned_text = re.sub(r'\s+', ' ', text.strip())
+
+        # 方法1：使用TF-IDF算法（更准确）
+        if use_tfidf:
+            try:
+                # jieba的TF-IDF关键词提取
+                keywords = jieba.analyse.extract_tags(
+                    cleaned_text,
+                    topK=top_k,
+                    withWeight=False,
+                    allowPOS=allow_pos
+                )
+                return keywords
+            except Exception as e:
+                # 降级到词频统计
+                print(f"TF-IDF提取失败，降级到词频统计: {e}")
+
+        # 方法2：词频统计（快速）
+        # 使用jieba进行精确分词
+        words = jieba.lcut(cleaned_text)
+
+        # 获取停用词
+        stopwords = SessionAnalyzer.get_stopwords()
+
+        # 过滤处理
+        filtered_words = []
+        for word in words:
+            # 转换为小写（英文）
+            word_lower = word.lower()
+
+            # 过滤条件
+            if (len(word_lower) >= min_word_length and
+                    word_lower not in stopwords and
+                    not word_lower.isdigit() and
+                    not re.match(r'^[^\u4e00-\u9fffa-zA-Z]+$', word_lower)):  # 过滤纯符号
+                filtered_words.append(word_lower)
+
+        # 词频统计
+        word_counts = Counter(filtered_words)
+
+        # 获取前top_k个词，但考虑词长和重要性
+        # 给长词一点额外权重（生产环境可以更复杂的权重计算）
+        scored_words = []
+        for word, count in word_counts.items():
+            # 基础分数 = 词频
+            score = count
+            # 长词稍微加分（可选）
+            if len(word) >= 4:
+                score *= 1.2
+            scored_words.append((word, score))
+
+        # 按分数排序
+        scored_words.sort(key=lambda x: x[1], reverse=True)
+
+        # 返回结果
+        return [word for word, _ in scored_words[:top_k]]
 
     @staticmethod
     def analyze_conversation_history(history: List[Dict[str, Any]]) -> Dict[str, Any]:
